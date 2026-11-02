@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 test('loads real cortex and exercises exploration controls',async({page})=>{
- const errors:string[]=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.stack||e.message));page.on('console',message=>{if(message.type()==='error'&&/THREE|shader|WebGL/i.test(message.text()))errors.push(message.text())});
  await page.goto('/');const asset=await page.request.get('/models/human-brain.glb');expect(asset.ok()).toBeTruthy();expect((await asset.body()).subarray(0,4).toString()).toBe('glTF');await expect(page.locator('canvas')).toBeVisible();
  await expect(page.getByText('Assembling cortical connections…')).toHaveCount(0,{timeout:30000});
  await expect(page.getByRole('heading',{name:'A universe. Waiting to be explored.'})).toBeVisible();

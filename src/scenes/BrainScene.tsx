@@ -4,15 +4,18 @@ import { Html, Line, OrbitControls, Stars, useGLTF, useProgress } from '@react-t
 import * as THREE from 'three';
 import type { OrbitControls as Controls } from 'three-stdlib';
 import { regions, type Region } from '../data/regions';
+import { createCortexMaterial } from '../utils/cortexMaterial';
 export type Mode='anatomy'|'activity'|'transparent';
 interface Props {mode:Mode;paused:boolean;labels:boolean;selected:Region|null;onSelect:(r:Region)=>void;reset:number;reduced:boolean;rotationSpeed:number;separation:number}
 class SceneBoundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true}}render(){return this.state.failed?<div className="scene-error"><b>3D viewer unavailable</b><p>The local anatomical asset or WebGL could not load. You can still explore all six regions below.</p><button onClick={()=>location.reload()}>Retry viewer</button></div>:this.props.children}}
 function Cortex({mode,separation,reduced}: {mode:Mode;separation:number;reduced:boolean}){
  const gltf=useGLTF('/models/human-brain.glb');
- const material=useMemo(()=>new THREE.MeshPhysicalMaterial({color:'#c7988d',roughness:.57,metalness:.08,clearcoat:.15,side:THREE.DoubleSide,transparent:true}),[]);
+ const material=useMemo(createCortexMaterial,[]);
+ const targetColor=useMemo(()=>new THREE.Color(mode==='anatomy'?'#d9b5aa':mode==='activity'?'#3c6d7e':'#78c8db'),[mode]);
+ const targetEmission=useMemo(()=>new THREE.Color(mode==='anatomy'?'#000000':'#103e50'),[mode]);
  const clone=useMemo(()=>{const c=gltf.scene.clone();c.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.computeVertexNormals();o.material=material}});return c},[gltf,material]);
  useEffect(()=>()=>material.dispose(),[material]);
- useFrame((_,dt)=>{const t=reduced?1:1-Math.exp(-dt*4);material.color.lerp(new THREE.Color(mode==='anatomy'?'#c7988d':mode==='activity'?'#3c6d7e':'#78c8db'),t);material.opacity=THREE.MathUtils.lerp(material.opacity,mode==='transparent'?.19:mode==='activity'?.65:1,t);material.emissive.lerp(new THREE.Color(mode==='anatomy'?'#160e16':'#103e50'),t);material.depthWrite=mode!=='transparent';clone.children.forEach((o,i)=>{o.position.z=THREE.MathUtils.lerp(o.position.z,(i===0?-1:1)*separation*.55,t)})});
+ useFrame((_,dt)=>{const t=reduced?1:1-Math.exp(-dt*4);material.color.lerp(targetColor,t);material.opacity=THREE.MathUtils.lerp(material.opacity,mode==='transparent'?.19:mode==='activity'?.65:1,t);material.emissive.lerp(targetEmission,t);material.depthWrite=mode!=='transparent';clone.children.forEach((o,i)=>{o.position.z=THREE.MathUtils.lerp(o.position.z,(i===0?-1:1)*separation*.55,t)})});
  return <primitive object={clone}/>;
 }
 function Signals({mode,paused,reduced}:{mode:Mode;paused:boolean;reduced:boolean}){
@@ -63,7 +66,7 @@ function World(p:Props){
   if(!p.paused&&!p.reduced)time.current+=dt;
   if(scan.current){scan.current.position.y=(time.current*.22%3.6)-1.8;scan.current.visible=!p.reduced&&!p.paused&&time.current%16<8}
  });
- return <><ambientLight intensity={.65}/><directionalLight position={[-3,4,5]} intensity={2.7} color="#f6d8cb"/><directionalLight position={[3,1,-2]} intensity={4} color="#578afc"/><pointLight position={[-3,-1,2]} intensity={6} color="#42d7ce"/>
+ return <><hemisphereLight args={['#dce5ee','#352632',.65]}/><directionalLight position={[-3,4,5]} intensity={2.65} color="#fff0e1"/><directionalLight position={[3,.5,4]} intensity={.75} color="#d6e3f0"/><directionalLight position={[2,2,-3]} intensity={1.8} color="#b3bddc"/><pointLight position={[-3,-1,2]} intensity={1.2} color="#77c7c0"/>
  <Suspense fallback={null}><group><Cortex mode={p.mode} separation={p.separation} reduced={p.reduced}/><Signals mode={p.mode} paused={p.paused} reduced={p.reduced}/>{regions.map(r=><Hotspot key={r.id} region={r} selected={p.selected?.id===r.id} labels={p.labels} animate={!p.paused&&!p.reduced} separation={p.separation} onSelect={p.onSelect}/>)}</group></Suspense>
  <mesh ref={scan} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[1.6,1.615,90]}/><meshBasicMaterial color="#59dccc" transparent opacity={.15} side={THREE.DoubleSide}/></mesh>
  <Stars radius={30} depth={15} count={550} factor={1.6} saturation={.4} fade speed={p.paused||p.reduced?0:.3}/>
