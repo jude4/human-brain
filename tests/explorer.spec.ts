@@ -21,3 +21,38 @@ test('mobile regions remain usable without horizontal overflow',async({page})=>{
  await page.getByRole('button',{name:'Explore brain regions'}).click();await page.locator('.region-list').getByRole('button',{name:/Brainstem/}).click();await expect(page.locator('.info-panel h2')).toHaveText('Brainstem');await expect(page.getByText('Reference hotspot:')).toBeVisible();
  await page.getByRole('button',{name:'Hide insights'}).click();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'/tmp/neuroverse-mobile.png'});
 });
+
+test('auto-rotation, tour navigation and hemisphere controls work',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await expect(page.getByText('Assembling cortical connections…')).toHaveCount(0,{timeout:30000});
+ const compass=page.getByTestId('orientation-compass');
+ await expect(compass).toBeAttached();
+ const initial=await compass.getAttribute('style');
+ await expect.poll(()=>compass.getAttribute('style')).not.toBe(initial);
+ await expect(page.getByRole('status')).toContainText('AUTO-ROTATION ON');
+ await page.getByRole('button',{name:'Pause animation'}).click();
+ await expect.poll(async()=>{const a=await compass.getAttribute('style');await page.waitForTimeout(250);return a===await compass.getAttribute('style')}).toBeTruthy();
+ await page.getByRole('button',{name:'Resume animation'}).click();
+ const resumed=await compass.getAttribute('style');await expect.poll(()=>compass.getAttribute('style')).not.toBe(resumed);
+ await page.getByRole('button',{name:'Viewer settings'}).click();
+ const speed=page.getByRole('slider',{name:'Rotation speed'});
+ await speed.focus();await speed.press('End');await expect(speed).toHaveValue('2');
+ const spacing=page.getByRole('slider',{name:'Separate hemispheres'});
+ await spacing.focus();await spacing.press('End');await expect(spacing).toHaveValue('1');
+ await page.getByRole('button',{name:'Viewer settings'}).click();
+ await page.getByRole('button',{name:'Take a guided tour'}).click();
+ await expect(page.locator('.info-panel h2')).toHaveText('Frontal lobe');
+ await expect(page.getByRole('button',{name:'End guided tour'})).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('.info-panel h2')).toHaveText('Parietal lobe',{timeout:14000});
+ await page.getByRole('button',{name:'Next brain region'}).click();
+ await expect(page.locator('.info-panel h2')).toHaveText('Temporal lobe');
+ await expect(page.getByRole('button',{name:'Take a guided tour'})).toHaveAttribute('aria-pressed','false');
+ await page.getByRole('button',{name:'Previous brain region'}).click();
+ await expect(page.locator('.info-panel h2')).toHaveText('Parietal lobe');
+ await page.getByRole('button',{name:'Reset camera'}).click();
+ await expect(page.getByRole('status')).toContainText('AUTO-ROTATION ON');
+ await page.getByRole('button',{name:'Viewer settings'}).click();
+ await expect(spacing).toHaveValue('0');
+ expect(errors).toEqual([]);
+});

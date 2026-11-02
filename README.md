@@ -17,6 +17,12 @@ Development server: port 5173. `npm run build` type-checks and builds into `dist
 
 Drag the model to rotate, scroll/pinch to zoom, right-drag or two-finger drag to pan. Select approximate anatomical reference hotspots or use the accessible region list. The bottom controls switch anatomy, illustrative neural activity and transparent modes, toggle labels, pause animation and reset the camera. Reduced-motion preferences disable automatic animation. On mobile, open “Explore brain regions” for the collapsible information panel.
 
+## Interactive exploration
+
+Auto-rotation is enabled on first load at a visible default speed. Dragging takes control immediately; the orbit resumes after 1.8 seconds of inactivity. Region selection holds the view for reading. Pause stops animation and rotation; reduced-motion preferences disable automatic rotation. Reset returns to the full brain and closes a tour.
+
+The viewer toolbar starts a six-region guided tour, advancing every nine seconds (paused by the animation pause button). Previous/next buttons browse regions manually and end the tour. Viewer settings adjust rotation speed and smoothly separate the real hemisphere meshes for an illustrative exploded cortical view. The spacing does not represent anatomical distances or add missing structures.
+
 ## Scientific asset and limitations
 
 `public/models/human-brain.glb` contains genuine left/right fsaverage5 pial surfaces bundled in Nilearn 0.14.1, originally reconstructed with FreeSurfer. It has 20,484 vertices and 40,960 triangles; 739 KB uncompressed. The GLB is loaded locally with Drei's GLTFLoader wrapper. Nilearn distribution licence: `public/models/LICENSE-NILEARN.txt` (BSD-3-Clause). Source: https://nilearn.github.io/stable/modules/generated/nilearn.datasets.fetch_surf_fsaverage.html . This is an average cortical surface, not a full individual brain or a segmented atlas.
